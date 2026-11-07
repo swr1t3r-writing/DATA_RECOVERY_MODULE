@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATA RECOVERY MODULE - TERMINAL DECRYPTOR</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font - Share Tech Mono for authentic terminal feel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Sci-Fi / Terminal Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        term: {
+                            bg: '#0a0101',
+                            dark: '#140303',
+                            red: '#ef4444',
+                            bright: '#ff4d4d',
+                            glow: '#ff2a2a',
+                            amber: '#fbbf24',
+                            alert: '#dc2626',
+                            dim: '#450a0a'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"Share Tech Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CRT Scanline & Screen Effects - Deep Crimson Theme */
+        .crt-screen {
+            background: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, rgba(10, 1, 1, 0.95) 100%), #0a0101;
+            box-shadow: inset 0 0 80px rgba(255, 42, 42, 0.15);
+            text-shadow: 0 0 6px rgba(255, 77, 77, 0.6);
+        }
+        
+        .crt-scanline {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.4) 50%,
+                rgba(0, 0, 0, 0.4)
+            );
+            background-size: 100% 4px;
+        }
+
+        .crt-flicker {
+            animation: flicker 0.18s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.96; }
+            50% { opacity: 1; }
+            100% { opacity: 0.97; }
+        }
+
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background-color: #ff4d4d;
+            box-shadow: 0 0 8px #ff2a2a;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Custom Scrollbar for CRT look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0101;
+            border-left: 1px solid #450a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #450a0a;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ef4444;
+        }
+
+        /* Neon glow button effects */
+        .neon-btn {
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+        .neon-btn:hover {
+            box-shadow: 0 0 18px rgba(255, 77, 77, 0.6);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="h-full bg-black text-term-bright font-mono selection:bg-term-red selection:text-black flex flex-col justify-between overflow-hidden crt-flicker">
+
+    <!-- CRT Screen Overlay Effects -->
+    <div class="pointer-events-none fixed inset-0 z-40 crt-scanline opacity-60"></div>
+    <div class="pointer-events-none fixed inset-0 z-40 bg-gradient-to-t from-black/40 via-transparent to-black/40"></div>
+
+    <!-- MAIN TERMINAL WRAPPER -->
+    <div class="relative z-10 flex flex-col h-full max-w-5xl mx-auto w-full p-2 sm:p-4 md:p-6 crt-screen border border-term-dim rounded-lg shadow-2xl my-auto">
+        
+        <!-- TERMINAL HEADER -->
+        <header class="border-b border-term-dim pb-3 mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-3 h-3 rounded-full bg-term-bright animate-ping"></div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-wider text-term-glow flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-term-red"></i> ARCHIVE RECOVERY TERMINAL v4.02
+                    </h1>
+                    <p class="text-xs text-term-red/70">SECURE D&D CAMPAIGN DATA DECRYPTION MODULE</p>
+                </div>
+            </div>
+
+            <!-- SYSTEM CONTROLS & STATUS -->
+            <div class="flex items-center gap-3 text-xs">
+                <div class="hidden sm:flex items-center gap-2 bg-term-dark px-2.5 py-1 rounded border border-term-dim">
+                    <span class="text-term-red/60">SYS STATUS:</span>
+                    <span id="system-status-indicator" class="text-term-bright font-bold">ONLINE [CORRUPTED]</span>
+                </div>
+                
+                <!-- Audio Toggle -->
+                <button id="audio-toggle-btn" class="bg-term-dark hover:bg-term-dim text-term-bright border border-term-dim px-3 py-1 rounded flex items-center gap-2 transition">
+                    <i id="audio-icon" class="fa-solid fa-volume-high text-term-red"></i>
+                    <span id="audio-label" class="hidden sm:inline">AUDIO ON</span>
+                </button>
+
+                <!-- Admin Config Modal Trigger -->
+                <button id="open-config-btn" class="neon-btn bg-term-dim/50 hover:bg-term-dim text-term-glow border border-term-red px-3 py-1 rounded flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-term-amber"></i>
+                    <span>DM CONFIG</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN DECRYPTION LOG / OUTPUT SCREEN -->
+        <main id="terminal-screen" class="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 text-sm sm:text-base leading-relaxed">
+            <!-- Boot text initialized by JS -->
+            <div id="boot-log" class="space-y-1 text-term-red/80"></div>
+            <!-- Dynamic Decryption Outputs -->
+            <div id="output-log" class="space-y-4"></div>
+        </main>
+
+        <!-- INPUT CONSOLE -->
+        <footer class="border-t border-term-dim pt-3">
+            <form id="decrypt-form" class="flex flex-col sm:flex-row gap-2 items-stretch">
+                <div class="relative flex-1 flex items-center bg-term-dark border border-term-dim focus-within:border-term-red rounded px-3 py-2 transition">
+                    <span class="text-term-glow font-bold mr-2 select-none">&gt;&nbsp;ENTER&nbsp;KEY:</span>
+                    <input 
+                        type="text" 
+                        id="decryption-key-input" 
+                        autocomplete="off" 
+                        spellcheck="false"
+                        placeholder="Type decryption string here..."
+                        class="w-full bg-transparent text-term-glow focus:outline-none placeholder-term-dim uppercase tracking-wider"
+                    >
+                    <span class="blinking-cursor"></span>
+                </div>
+                <button 
+                    type="submit" 
+                    id="submit-btn"
+                    class="neon-btn bg-term-red text-black font-bold px-6 py-2 rounded hover:bg-term-glow active:scale-95 transition flex items-center justify-center gap-2 uppercase tracking-wider"
+                >
+                    <i class="fa-solid fa-key"></i> Decrypt
+                </button>
+            </form>
+            <div class="mt-2 text-xs text-term-red/50 flex justify-between items-center">
+                <span>Tip: Decryption keys are case-insensitive. Try <code class="text-term-amber">HELP</code> or <code class="text-term-amber">LOGS</code>.</span>
+                <span id="session-recovered-count">SOLVED: 0 MODULES</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- DM CONFIG / ADMIN MODAL -->
+    <div id="config-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-term-dark border border-term-red w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="bg-term-bg border-b border-term-dim p-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-database text-term-amber"></i>
+                    <h2 class="text-lg font-bold text-term-amber">DM MODULE CONFIGURATOR</h2>
+                </div>
+                <button id="close-config-btn" class="text-term-red/70 hover:text-term-alert text-xl px-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content & Forms -->
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+                
+                <!-- Notice for DM -->
+                <div class="p-3 border border-term-dim bg-term-bg/60 rounded text-xs text-term-bright">
+                    <p class="font-bold text-term-amber mb-1"><i class="fa-solid fa-circle-info"></i> Dungeon Master Guide:</p>
+                    <p>Add custom encryption codes here for your campaign. Entries added in this window save automatically to your browser's local storage. You can also edit the hardcoded <code class="text-term-glow">RECOVERY_CODES</code> array in the source HTML file!</p>
+                </div>
+
+                <!-- Add / Edit Form -->
+                <form id="code-editor-form" class="bg-term-bg p-4 border border-term-dim rounded-md space-y-4">
+                    <h3 id="form-title" class="font-bold text-term-glow text-base border-b border-term-dim pb-1">
+                        <i class="fa-solid fa-plus text-term-red"></i> Add New Decryption Code
+                    </h3>
+                    <input type="hidden" id="edit-id" value="">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-term-red/80 mb-1">Decryption Code / Key *</label>
+                            <input 
+                                type="text" 
+                                id="config-code" 
+                                required 
+                                placeholder="e.g. OMEGA-77" 
+                                class="w-full bg-term-dark border border-term-dim focus:border-term-red px-3 py-1.5 rounded text-term-glow font-mono uppercase"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-term-red/80 mb-1">Module Title *</label>
+                            <input 
+                                type="text" 
+                                id="config-title" 
+                                required 
+                                placeholder="e.g. Arcane Lab Research Note #3" 
+                                class="w-full bg-term-dark border border-term-dim focus:border-term-red px-3 py-1.5 rounded text-term-glow"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-term-red/80 mb-1">Decrypted Payload Message *</label>
+                        <textarea 
+                            id="config-message" 
+                            rows="3" 
+                            required 
+                            placeholder="Enter the secret lore, message, or coordinates revealed when players enter the code..."
+                            class="w-full bg-term-dark border border-term-dim focus:border-term-red px-3 py-2 rounded text-term-glow font-mono text-xs sm:text-sm"
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-term-red/80 mb-1">Payload Access Link (Optional URL or External Asset)</label>
+                        <input 
+                            type="url" 
+                            id="config-link" 
+                            placeholder="e.g. https://drive.google.com/file/d/your-map-file or https://dndbeyond.com" 
+                            class="w-full bg-term-dark border border-term-dim focus:border-term-red px-3 py-1.5 rounded text-term-glow text-xs"
+                        >
+                    </div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button 
+                            type="button" 
+                            id="cancel-edit-btn" 
+                            class="hidden px-4 py-1.5 bg-gray-800 text-gray-300 hover:bg-gray-700 rounded text-xs"
+                        >
+                            Cancel Edit
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="neon-btn bg-term-red text-black font-bold px-4 py-1.5 rounded hover:bg-term-glow text-xs flex items-center gap-1"
+                        >
+                            <i class="fa-solid fa-floppy-disk"></i> Save Code Entry
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Current Codes List -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-term-glow">Active Decryption Entries</h3>
+                        <button id="reset-default-btn" class="text-xs text-term-amber hover:underline">
+                            <i class="fa-solid fa-rotate-left"></i> Reset to Hardcoded Defaults
+                        </button>
+                    </div>
+                    <div class="border border-term-dim rounded-md overflow-hidden">
+                        <div id="codes-table-container" class="divide-y divide-term-dim bg-term-bg">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-term-bg border-t border-term-dim p-3 flex justify-end">
+                <button id="done-config-btn" class="bg-term-dim hover:bg-term-red hover:text-black text-term-glow px-4 py-1.5 rounded text-xs font-bold transition">
+                    CLOSE & RETURN TO TERMINAL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT & LOGIC -->
+    <script>
+        /**
+         * =========================================================================
+         * DM EASY HARDCODED DECRYPTION CODES CONFIGURATION
+         * =========================================================================
+         * DMs can add or modify default codes directly in this array!
+         */
+        const HARDCODED_RECOVERY_CODES = [
+            {
+                id: 'code-default-1',
+                code: 'CYPHER-99',
+                title: 'FACILITY ALPHA DIRECTIVE',
+                message: 'CLARK PROTOCOL INITIATED: The ancient spell-forge below the citadel was not built by the dwarves. It is a containment engine for an extraplanar entity known as Leviathan-IX. Do not break the runic seal.',
+                accessLink: 'https://www.dndbeyond.com'
+            },
+            {
+                id: 'code-default-2',
+                code: 'VALKYRIE',
+                title: 'AIRSHIP NAVIGATION LOGS',
+                message: 'Coordinates recovered for floating sky-fortress ruins: 45°12\'N, 12°88\'E. The primary elemental crystal powering the hull is depleted. Defense golems remain hostile.',
+                accessLink: ''
+            },
+            {
+                id: 'code-default-3',
+                code: 'BEHOLDER-EYE',
+                title: 'XANATHAR CARTEL TRANSMISSION',
+                message: 'Vault passcode fragment recovered: 4 - 8 - 15 - 16 - 23 - 42. Beware the illusion traps guarding the vault room door.',
+                accessLink: ''
+            }
+        ];
+
+        // System State
+        let recoveryCodes = [];
+        let solvedCodes = new Set();
+        let audioEnabled = true;
+        let isProcessing = false;
+
+        /**
+         * Web Audio API Sound Synth Engine - Corrupted & Low-Frequency Ancient Audio
+         */
+        class TerminalAudioEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // Low frequency corrupted key clack with static crackle
+            playKeyBeep() {
+                if (!audioEnabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(90 + Math.random() * 40, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.05);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(300, now);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.05);
+
+                this.playStaticBurst(0.03, 0.02);
+            }
+
+            // Corrupted Static / Noise Crackle Burst
+            playStaticBurst(duration = 0.1, volume = 0.03) {
+                if (!audioEnabled || !this.ctx) return;
+                try {
+                    const bufferSize = this.ctx.sampleRate * duration;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(400 + Math.random() * 600, this.ctx.currentTime);
+                    filter.Q.setValueAtTime(1.5, this.ctx.currentTime);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    noise.start();
+                } catch (e) {
+                    // Suppress audio error exceptions
+                }
+            }
+
+            // Corrupted low-frequency success chime with pitch wobble
+            playSuccessChime() {
+                if (!audioEnabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const freqs = [146.83, 220.00, 293.66]; // D3, A3, D4
+
+                freqs.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+
+                    osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+                    osc.frequency.setValueAtTime(freq + (Math.random() * 4 - 2), now + idx * 0.12);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.9, now + idx * 0.12 + 0.4);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800, now + idx * 0.12);
+
+                    gain.gain.setValueAtTime(0.06, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.5);
+                });
+
+                this.playStaticBurst(0.2, 0.04);
+            }
+
+            // Corrupted heavy error buzz with low-frequency drop and static
+            playErrorBuzz() {
+                if (!audioEnabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, now);
+                osc.frequency.setValueAtTime(75, now + 0.1);
+                osc.frequency.setValueAtTime(50, now + 0.2);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(250, now);
+
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
+
+                this.playStaticBurst(0.35, 0.08);
+            }
+
+            // Typewriter tick (low mechanical relay click)
+            playTypeTick() {
+                if (!audioEnabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120 + Math.random() * 80, now);
+
+                gain.gain.setValueAtTime(0.02, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.03);
+            }
+        }
+
+        const audio = new TerminalAudioEngine();
+
+        // Initialize Codes from Storage or Defaults
+        function loadCodes() {
+            const stored = localStorage.getItem('dnd_recovery_codes');
+            if (stored) {
+                try {
+                    recoveryCodes = JSON.parse(stored);
+                } catch (e) {
+                    console.error('Failed to parse stored codes, resetting to defaults.', e);
+                    recoveryCodes = [...HARDCODED_RECOVERY_CODES];
+                }
+            } else {
+                recoveryCodes = [...HARDCODED_RECOVERY_CODES];
+            }
+        }
+
+        function saveCodes() {
+            localStorage.setItem('dnd_recovery_codes', JSON.stringify(recoveryCodes));
+            renderConfigList();
+        }
+
+        // Boot Terminal Sequence
+        function runBootSequence() {
+            const bootLog = document.getElementById('boot-log');
+            const bootLines = [
+                'INITIALIZING QUANTUM DATA DECRYPTION KERNEL...',
+                'WARNING: HARDWARE DEGRADATION DETECTED [OSC_DRIFT: 14.2%]',
+                'CHECKING INTEGRITY OF RECOVERY BLOCKS: [ PARTIAL ]',
+                'LOADING CAMPAIGN ENCRYPTION MATRIX...',
+                'DECRYPTION MODULE READY. AWAITING USER COMMAND ENTRY.',
+                '-------------------------------------------------------'
+            ];
+
+            let lineIndex = 0;
+            const interval = setInterval(() => {
+                if (lineIndex < bootLines.length) {
+                    const line = document.createElement('div');
+                    line.textContent = bootLines[lineIndex];
+                    bootLog.appendChild(line);
+                    audio.playTypeTick();
+                    lineIndex++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 120);
+        }
+
+        // Typewriter Effect Generator
+        async function typeWriter(text, element, speed = 18) {
+            for (let i = 0; i < text.length; i++) {
+                element.textContent += text.charAt(i);
+                if (i % 2 === 0) audio.playTypeTick();
+                await new Promise(res => setTimeout(res, speed));
+                scrollToBottom();
+            }
+        }
+
+        function scrollToBottom() {
+            const screen = document.getElementById('terminal-screen');
+            screen.scrollTop = screen.scrollHeight;
+        }
+
+        // Update Solved Counter UI
+        function updateSolvedCount() {
+            const counter = document.getElementById('session-recovered-count');
+            counter.textContent = `SOLVED: ${solvedCodes.size} / ${recoveryCodes.length} MODULES`;
+        }
+
+        // Handle Decryption Input Processing
+        async function handleDecryptionSubmit(e) {
+            e.preventDefault();
+            if (isProcessing) return;
+
+            const input = document.getElementById('decryption-key-input');
+            const rawKey = input.value.trim();
+            if (!rawKey) return;
+
+            const cleanKey = rawKey.toUpperCase();
+            input.value = '';
+
+            const outputLog = document.getElementById('output-log');
+
+            // Log user query command
+            const cmdEntry = document.createElement('div');
+            cmdEntry.className = 'text-term-glow font-bold flex items-center gap-2 border-t border-term-dim/40 pt-2';
+            cmdEntry.innerHTML = `<span class="text-term-red">&gt; QUERY KEY:</span> <span>${escapeHtml(rawKey)}</span>`;
+            outputLog.appendChild(cmdEntry);
+            scrollToBottom();
+
+            isProcessing = true;
+
+            // Handle special system commands
+            if (cleanKey === 'HELP') {
+                audio.playKeyBeep();
+                const helpDiv = document.createElement('div');
+                helpDiv.className = 'bg-term-dark/70 border border-term-dim p-3 rounded text-xs space-y-1';
+                helpDiv.innerHTML = `
+                    <p class="text-term-amber font-bold">&gt;&nbsp;SYSTEM HELP COMMANDS:</p>
+                    <p>• Enter recovery passcode keys to unlock classified campaign files.</p>
+                    <p>• Type <span class="text-term-glow">LOGS</span> to list unlocked titles in this session.</p>
+                    <p>• Type <span class="text-term-glow">CLEAR</span> to purge terminal logs.</p>
+                `;
+                outputLog.appendChild(helpDiv);
+                isProcessing = false;
+                scrollToBottom();
+                return;
+            }
+
+            if (cleanKey === 'CLEAR') {
+                outputLog.innerHTML = '';
+                isProcessing = false;
+                return;
+            }
+
+            if (cleanKey === 'LOGS') {
+                audio.playKeyBeep();
+                const logsDiv = document.createElement('div');
+                logsDiv.className = 'bg-term-dark/70 border border-term-dim p-3 rounded text-xs space-y-1';
+                if (solvedCodes.size === 0) {
+                    logsDiv.innerHTML = `<p class="text-term-amber">&gt;&nbsp;NO RECOVERED MODULES IN THIS SESSION YET.</p>`;
+                } else {
+                    logsDiv.innerHTML = `<p class="text-term-glow font-bold mb-1">&gt;&nbsp;UNLOCKED MODULE LOGS:</p>` +
+                        Array.from(solvedCodes).map(code => `<div class="text-term-bright">• ${escapeHtml(code)}</div>`).join('');
+                }
+                outputLog.appendChild(logsDiv);
+                isProcessing = false;
+                scrollToBottom();
+                return;
+            }
+
+            // Decryption sequence simulation
+            const statusBox = document.createElement('div');
+            statusBox.className = 'text-xs text-term-amber flex items-center gap-2';
+            statusBox.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>RUNNING DECRYPTION ALGORITHMS...</span>`;
+            outputLog.appendChild(statusBox);
+            scrollToBottom();
+
+            await new Promise(r => setTimeout(r, 600));
+
+            // Search for code match
+            const match = recoveryCodes.find(item => item.code.trim().toUpperCase() === cleanKey);
+
+            if (match) {
+                // SUCCESS MATCH
+                audio.playSuccessChime();
+                statusBox.className = 'text-xs text-term-bright font-bold flex items-center gap-2';
+                statusBox.innerHTML = `<i class="fa-solid fa-circle-check text-term-bright"></i> <span class="text-term-bright">MATCH FOUND - DECRYPTING PAYLOAD BLOCK</span>`;
+
+                const resultCard = document.createElement('div');
+                resultCard.className = 'bg-term-dark/90 border-2 border-term-red rounded-md p-4 space-y-3 shadow-lg shadow-term-red/10 my-2';
+                
+                resultCard.innerHTML = `
+                    <div class="border-b border-term-dim pb-2 flex justify-between items-start flex-wrap gap-2">
+                        <div>
+                            <span class="text-xs bg-term-red text-black font-bold px-2 py-0.5 rounded uppercase">UNLOCKED DATA BLOCK</span>
+                            <h3 class="text-lg font-bold text-term-glow mt-1">${escapeHtml(match.title)}</h3>
+                        </div>
+                        <span class="text-xs text-term-red/70">KEY: ${escapeHtml(match.code)}</span>
+                    </div>
+                    <div id="msg-${match.id}" class="text-term-bright whitespace-pre-wrap leading-relaxed"></div>
+                `;
+
+                if (match.accessLink) {
+                    const linkBtn = document.createElement('div');
+                    linkBtn.className = 'pt-2 border-t border-term-dim/50 flex justify-end';
+                    linkBtn.innerHTML = `
+                        <a href="${escapeHtml(match.accessLink)}" target="_blank" rel="noopener noreferrer" 
+                           class="neon-btn inline-flex items-center gap-2 bg-term-red text-black font-bold text-xs px-4 py-2 rounded hover:bg-term-glow transition">
+                           <i class="fa-solid fa-external-link"></i> ACCESS RECOVERY PAYLOAD LINK
+                        </a>
+                    `;
+                    resultCard.appendChild(linkBtn);
+                }
+
+                outputLog.appendChild(resultCard);
+                solvedCodes.add(`[${match.code}] ${match.title}`);
+                updateSolvedCount();
+
+                const msgContainer = resultCard.querySelector(`#msg-${match.id}`);
+                await typeWriter(match.message, msgContainer, 15);
+
+            } else {
+                // ERROR MATCH
+                audio.playErrorBuzz();
+                statusBox.className = 'text-xs text-term-alert font-bold flex items-center gap-2';
+                statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> DECRYPTION FAILED: ACCESS DENIED / INVALID KEY`;
+
+                const errBox = document.createElement('div');
+                errBox.className = 'bg-term-alert/10 border border-term-alert/40 text-term-alert text-xs p-3 rounded';
+                errBox.textContent = `ERROR 404: Cryptographic key "${cleanKey}" does not match any known archival entry in this module.`;
+                outputLog.appendChild(errBox);
+            }
+
+            isProcessing = false;
+            scrollToBottom();
+        }
+
+        // HTML Sanitizer
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, (m) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[m]);
+        }
+
+        // CONFIG MODAL & MANAGEMENT LOGIC
+        function renderConfigList() {
+            const container = document.getElementById('codes-table-container');
+            if (recoveryCodes.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-term-red/50">No codes currently defined.</div>`;
+                return;
+            }
+
+            container.innerHTML = recoveryCodes.map(item => `
+                <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-term-dark/60 transition">
+                    <div class="space-y-0.5 max-w-xl">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-term-amber font-mono bg-term-dark border border-term-dim px-2 py-0.5 rounded text-xs">${escapeHtml(item.code)}</span>
+                            <span class="font-bold text-term-glow text-sm">${escapeHtml(item.title)}</span>
+                        </div>
+                        <p class="text-xs text-term-red/70 truncate max-w-lg">${escapeHtml(item.message)}</p>
+                        ${item.accessLink ? `<a href="${escapeHtml(item.accessLink)}" target="_blank" class="text-[10px] text-term-bright hover:underline block truncate"><i class="fa-solid fa-link"></i> ${escapeHtml(item.accessLink)}</a>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2 self-end sm:self-center">
+                        <button onclick="editCodeEntry('${item.id}')" class="text-xs bg-term-dim/50 hover:bg-term-dim text-term-glow border border-term-dim px-2.5 py-1 rounded">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteCodeEntry('${item.id}')" class="text-xs bg-red-950/40 hover:bg-red-900/60 text-term-alert border border-red-800 px-2.5 py-1 rounded">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            updateSolvedCount();
+        }
+
+        function handleCodeFormSubmit(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('edit-id').value;
+            const codeInput = document.getElementById('config-code').value.trim().toUpperCase();
+            const titleInput = document.getElementById('config-title').value.trim();
+            const messageInput = document.getElementById('config-message').value.trim();
+            const linkInput = document.getElementById('config-link').value.trim();
+
+            if (!codeInput || !titleInput || !messageInput) return;
+
+            if (idInput) {
+                const idx = recoveryCodes.findIndex(c => c.id === idInput);
+                if (idx !== -1) {
+                    recoveryCodes[idx] = {
+                        id: idInput,
+                        code: codeInput,
+                        title: titleInput,
+                        message: messageInput,
+                        accessLink: linkInput
+                    };
+                }
+            } else {
+                const newEntry = {
+                    id: 'code-' + Date.now(),
+                    code: codeInput,
+                    title: titleInput,
+                    message: messageInput,
+                    accessLink: linkInput
+                };
+                recoveryCodes.push(newEntry);
+            }
+
+            saveCodes();
+            resetForm();
+        }
+
+        function editCodeEntry(id) {
+            const entry = recoveryCodes.find(c => c.id === id);
+            if (!entry) return;
+
+            document.getElementById('edit-id').value = entry.id;
+            document.getElementById('config-code').value = entry.code;
+            document.getElementById('config-title').value = entry.title;
+            document.getElementById('config-message').value = entry.message;
+            document.getElementById('config-link').value = entry.accessLink || '';
+
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-term-amber"></i> Edit Decryption Entry`;
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+        }
+
+        function deleteCodeEntry(id) {
+            recoveryCodes = recoveryCodes.filter(c => c.id !== id);
+            saveCodes();
+        }
+
+        function resetForm() {
+            document.getElementById('code-editor-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-plus text-term-red"></i> Add New Decryption Code`;
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        }
+
+        // INITIALIZATION & EVENT LISTENERS
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCodes();
+            runBootSequence();
+
+            document.getElementById('decrypt-form').addEventListener('submit', handleDecryptionSubmit);
+
+            document.getElementById('decryption-key-input').addEventListener('keydown', () => {
+                audio.playKeyBeep();
+            });
+
+            document.getElementById('audio-toggle-btn').addEventListener('click', () => {
+                audioEnabled = !audioEnabled;
+                const icon = document.getElementById('audio-icon');
+                const label = document.getElementById('audio-label');
+                if (audioEnabled) {
+                    icon.className = 'fa-solid fa-volume-high text-term-red';
+                    label.textContent = 'AUDIO ON';
+                } else {
+                    icon.className = 'fa-solid fa-volume-xmark text-term-alert';
+                    label.textContent = 'AUDIO OFF';
+                }
+            });
+
+            const modal = document.getElementById('config-modal');
+            document.getElementById('open-config-btn').addEventListener('click', () => {
+                renderConfigList();
+                modal.classList.remove('hidden');
+            });
+
+            const closeModal = () => modal.classList.add('hidden');
+            document.getElementById('close-config-btn').addEventListener('click', closeModal);
+            document.getElementById('done-config-btn').addEventListener('click', closeModal);
+
+            document.getElementById('code-editor-form').addEventListener('submit', handleCodeFormSubmit);
+            document.getElementById('cancel-edit-btn').addEventListener('click', resetForm);
+
+            document.getElementById('reset-default-btn').addEventListener('click', () => {
+                recoveryCodes = [...HARDCODED_RECOVERY_CODES];
+                saveCodes();
+            });
+        });
+    </script>
+</body>
+</html>

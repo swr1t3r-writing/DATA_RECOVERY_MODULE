@@ -1,16 +1,16 @@
 [
     {
-        "id": "code-default-1",
-        "code": "CYPHER-99",
-        "title": "FACILITY ALPHA DIRECTIVE",
-        "message": "CLARK PROTOCOL INITIATED: The ancient spell-forge below the citadel was not built by the dwarves. It is a containment engine for an extraplanar entity known as Leviathan-IX. Do not break the runic seal.",
-        "accessLink": "https://www.dndbeyond.com"
+        "id": "1001",
+        "code": "CELARIS",
+        "title": "THE CELARIS DIRECTIVE",
+        "message": "DIRECTIVE OVERVIEW\nDOCUMENT CLASSIFICATION: CELARIS / LEVEL II\n\nThe Celaris Directive was established to investigate the possibility of achieving controlled biological advancement through the utilization of Caro Viva-derived compounds.\n\nInitial findings indicate that Ichor possesses properties capable of accelerating cellular regeneration, facilitating physiological adaptation, and increasing an organism's receptivity to external supernatural influences.\n\nThe directive seeks to establish a reliable method of regulating these effects.\n\nPRIMARY OBJECTIVES\n1. Identify the biological mechanisms responsible for Ichor production.\n2. Establish consistent methods of extraction and refinement.\n3. Determine the limitations of Ichor-induced biological adaptation.\n4. Investigate the relationship between biological alteration and supernatural receptivity.\n5. Develop a stable model for controlled organism enhancement.",
+        "accessLink": ""
     },
     {
-        "id": "code-default-2",
-        "code": "VALKYRIE",
-        "title": "AIRSHIP NAVIGATION LOGS",
-        "message": "Coordinates recovered for floating sky-fortress ruins: 45°12'N, 12°88'E. The primary elemental crystal powering the hull is depleted. Defense golems remain hostile.",
+        "id": "2001",
+        "code": "JHQHVLV",
+        "title": "PROJECT EXODUS",
+        "message": "PROJECT EXODUS | C-Cypher 3R | ABC\n\nIf you're reading this congratulations. The system and code that's acting as a firewall for these messages seems to be working. Whatever you do, don't trust what the Vitalis Industries have been telling you. They all have fabricated lies behind every promise they made. If you don't believe me, here's proof.",
         "accessLink": ""
     },
     {

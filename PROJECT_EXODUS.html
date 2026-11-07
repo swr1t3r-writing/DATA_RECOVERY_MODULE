@@ -518,26 +518,35 @@
 
         const audio = new TerminalAudioEngine();
 
-        // Initialize Codes from Storage or Defaults
-        function loadCodes() {
-            const stored = localStorage.getItem('dnd_recovery_codes');
-            if (stored) {
-                try {
-                    recoveryCodes = JSON.parse(stored);
-                } catch (e) {
-                    console.error('Failed to parse stored codes, resetting to defaults.', e);
-                    recoveryCodes = [...HARDCODED_RECOVERY_CODES];
-                }
-            } else {
-                recoveryCodes = [...HARDCODED_RECOVERY_CODES];
+        // Fallback codes in case fetch fails or offline
+        const FALLBACK_CODES = [
+            {
+                id: 'code-default-1',
+                code: 'CYPHER-99',
+                title: 'FACILITY ALPHA DIRECTIVE',
+                message: 'CLARK PROTOCOL INITIATED:\n\nThe ancient spell-forge below the citadel was not built by the dwarves.',
+                accessLink: ''
             }
-        }
+        ];
 
-        function saveCodes() {
-            localStorage.setItem('dnd_recovery_codes', JSON.stringify(recoveryCodes));
+        // Load codes asynchronously from the shared JSON file
+        async function loadCodes() {
+            try {
+                const response = await fetch('codes.json?t=' + Date.now());
+                if (!response.ok) throw new Error('Network response was not ok');
+                recoveryCodes = await response.json();
+            } catch (e) {
+                console.error('Failed to load shared codes.json, using fallback.', e);
+                recoveryCodes = [...FALLBACK_CODES];
+            }
             renderConfigList();
         }
 
+        function saveCodes() {
+            // Keeps local storage active for your local preview testing
+            localStorage.setItem('dnd_recovery_codes', JSON.stringify(recoveryCodes));
+            renderConfigList();
+        }
         // Boot Terminal Sequence
         function runBootSequence() {
             const bootLog = document.getElementById('boot-log');
@@ -820,8 +829,8 @@
         }
 
         // INITIALIZATION & EVENT LISTENERS
-        window.addEventListener('DOMContentLoaded', () => {
-            loadCodes();
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadCodes(); // Wait for codes to fetch before full init
             runBootSequence();
 
             document.getElementById('decrypt-form').addEventListener('submit', handleDecryptionSubmit);
